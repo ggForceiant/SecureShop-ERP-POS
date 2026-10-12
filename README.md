@@ -16,7 +16,7 @@
 
 ---
 
-## 🚀 2. Texnologiya Stoki (Tech Stack)
+## 🚀 2. Texnologiya Stoku (Tech Stack)
 
 | Hissə | Texnologiya / Kitabxana | Təsvir / İstifadə Məqsədi |
 | :--- | :--- | :--- |
