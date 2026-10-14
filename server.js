@@ -15,15 +15,15 @@ app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 app.use(express.json({ limit: '10kb' }));
 const path = require('path'); // Əgər yuxarıda require('path') yoxdursa bunu əlavə edin
 
-// 1. Public qovluğundakı statik faylları (index.html, style.css, app.js) xaricə açır
-app.use(express.static(path.join(__dirname, 'public')));
+// 1. Frontend fayllarını secure-shop-frontend papkasından oxuyuruq
+app.use(express.static(path.join(__dirname, 'secure-shop-frontend')));
 
-// 2. Ana ünvana (/) və ya digər səhifələrə girəndə public/index.html faylını göndərir
+// 2. Bütün UI marşrutlarını secure-shop-frontend/index.html faylına yönləndiririk
 app.get('*', (req, res, next) => {
     if (req.url.startsWith('/api')) {
         return next();
     }
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'secure-shop-frontend', 'index.html'));
 });
 // Supabase PostgreSQL Bağlantısı
 const pool = new Pool({
