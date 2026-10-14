@@ -15,8 +15,6 @@ app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 app.use(express.json({ limit: '10kb' }));
 const path = require('path'); // Əgər yuxarıda require('path') yoxdursa bunu əlavə edin
 
-const path = require('path');
-
 // 1. Public qovluğundakı statik faylları (index.html, style.css, app.js) xaricə açır
 app.use(express.static(path.join(__dirname, 'public')));
 
