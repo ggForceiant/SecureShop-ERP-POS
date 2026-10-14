@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureShop - Secure ERP & Store</title>
+    <!-- Font Awesome İkonları -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -56,7 +57,7 @@
                 </div>
                 <button type="submit" class="btn-submit">Giriş</button>
             </form>
-            <div id="login-error" class="login-error-box" style="display: none;"></div>
+            <div id="login-error" class="login-error-box" style="display: none; color: #f43f5e; margin-top: 10px; font-size: 0.8rem; text-align: center;"></div>
         </div>
     </div>
 
@@ -65,19 +66,20 @@
         <div class="user-banner">
             <div>
                 <h3 id="user-display"></h3>
-                <p>Sistem İdarə Paneli</p>
+                <p id="role-permissions-desc" style="color: #94a3b8; font-size: 0.8rem; margin-top: 4px;"></p>
             </div>
+            <div id="role-badge" class="role-badge-box"></div>
         </div>
 
         <div class="table-card">
             <table>
                 <thead>
                     <tr>
-                        <th style="padding: 12px;">ID</th>
-                        <th style="padding: 12px;">Məhsul Adı</th>
-                        <th style="padding: 12px;">Qiymət</th>
-                        <th style="padding: 12px;">Stok</th>
-                        <th style="padding: 12px; text-align: right;">Status</th>
+                        <th>ID</th>
+                        <th>Məhsul Adı</th>
+                        <th>Qiymət</th>
+                        <th>Stok</th>
+                        <th style="text-align: right;">Əməliyyat</th>
                     </tr>
                 </thead>
                 <tbody id="products-tbody"></tbody>

@@ -12,8 +12,8 @@ function sanitizeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-// Düzgün SVG Data-URI (şəkillər bloka düşməsin deyə)
-const DEFAULT_IMAGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='100%' height='100%' fill='%230f172a'/><text x='50%' y='50%' font-family='sans-serif' font-size='16' font-weight='bold' fill='%23818cf8' text-anchor='middle'>SecureShop Product</text></svg>";
+// Güvenli SVG Yedeği (Görseller yüklenemezse devreye girer)
+const DEFAULT_IMAGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='100%' height='100%' fill='%230f172a'/><text x='50%' y='50%' font-family='sans-serif' font-size='16' font-weight='bold' fill='%23818cf8' text-anchor='middle'>SecureShop Məhsul</text></svg>";
 
 const PRODUCT_IMAGES = {
     'Noutbuk Dell XPS 15': 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=400&q=80',
@@ -24,10 +24,16 @@ const PRODUCT_IMAGES = {
     'Təhlükəsizlik Kamerası Hikvision 4K': 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&w=400&q=80'
 };
 
+const ROLES = {
+    1: { name: 'Admin (Level 1)', color: 'badge-admin', desc: 'Sistem Administrasiyası: Stok dəyişmə və AES-256 Log' },
+    2: { name: 'Manager (Level 2)', color: 'badge-manager', desc: 'Menecer: Məhsul və hesabatlara baxış yetkisi' },
+    3: { name: 'Operator (Level 3)', color: 'badge-operator', desc: 'Operator / Kassir: Satış icra etmə yetkisi' },
+    4: { name: 'Viewer (Level 4)', color: 'badge-viewer', desc: 'Müşahidəçi: Yalnız baxış hüququ' }
+};
+
 let publicProducts = [];
 let cart = [];
 
-// Müasir Toast Bildiriş Funksiyası (Alert Əvəzi)
 function showToast(message, type = 'success') {
     let toast = document.getElementById('toast-notification');
     if (!toast) {
@@ -39,9 +45,7 @@ function showToast(message, type = 'success') {
     toast.textContent = message;
     toast.style.backgroundColor = type === 'error' ? '#f43f5e' : '#10b981';
     toast.classList.add('show');
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
+    setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
 window.showStorefront = function() {
@@ -235,32 +239,85 @@ function renderCartItems() {
 
 async function showDashboardERP() {
     const user = JSON.parse(localStorage.getItem('user')) || { username: 'İşçi', access_level: 4 };
+    const roleInfo = ROLES[user.access_level] || ROLES[4];
+
     document.getElementById('user-display').textContent = sanitizeHTML(user.username);
+    document.getElementById('role-permissions-desc').textContent = sanitizeHTML(roleInfo.desc);
+
+    const badge = document.getElementById('role-badge');
+    badge.textContent = roleInfo.name;
+    badge.className = `role-badge-box ${roleInfo.color}`;
+
     fetchERPProducts(user.access_level);
 }
 
 async function fetchERPProducts(accessLevel) {
     const tbody = document.getElementById('products-tbody');
     if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="padding: 16px; text-align: center; color: #94a3b8;">Yüklənir...</td></tr>';
+
     try {
         const response = await fetch(`${API_URL}/products`);
         if (response.ok) {
             const products = await response.json();
-            tbody.innerHTML = '';
-            products.forEach(p => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="padding: 12px; color: #64748b;">#${p.product_id}</td>
-                    <td style="padding: 12px; font-weight: 600;">${sanitizeHTML(p.product_name)}</td>
-                    <td style="padding: 12px; color: #818cf8;">${p.price} AZN</td>
-                    <td style="padding: 12px;">${p.stock_quantity} ədəd</td>
-                    <td style="padding: 12px; text-align: right;"><span style="color: #10b981;">Aktiv</span></td>
-                `;
-                tbody.appendChild(tr);
-            });
+            renderERPTable(products, accessLevel);
         }
-    } catch(e) {}
+    } catch (e) {}
 }
+
+function renderERPTable(products, accessLevel) {
+    const tbody = document.getElementById('products-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    products.forEach(p => {
+        const tr = document.createElement('tr');
+
+        let actionBtn = '';
+        if (accessLevel === 1) {
+            actionBtn = `<button onclick="window.updateStockInDB(${p.product_id})" class="btn-action btn-edit"><i class="fa-solid fa-pen-to-square"></i> Stoku Dəyiş</button>`;
+        } else if (accessLevel === 3) {
+            actionBtn = `<button onclick="window.makeSaleInDB(${p.product_id})" class="btn-action btn-sale"><i class="fa-solid fa-cart-shopping"></i> Satış Et</button>`;
+        } else {
+            actionBtn = `<span style="color: #64748b; font-size: 0.75rem; font-style: italic;"><i class="fa-solid fa-lock"></i> Yalnız Baxış</span>`;
+        }
+
+        tr.innerHTML = `
+            <td style="font-family: monospace; color: #64748b;">#${p.product_id}</td>
+            <td style="font-weight: 600; color: #e2e8f0;">${sanitizeHTML(p.product_name)}</td>
+            <td style="font-family: monospace; color: #818cf8;">${p.price} AZN</td>
+            <td><span class="stock-pill">${p.stock_quantity} ədəd</span></td>
+            <td style="text-align: right;">${actionBtn}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+window.updateStockInDB = async function(productId) {
+    const newStock = prompt("Yeni stok miqdarını daxil edin:");
+    if (!newStock || isNaN(newStock) || parseInt(newStock) < 0) return showToast("Düzgün stok daxil edin!", 'error');
+
+    const res = await fetch(`${API_URL}/products/${productId}/stock`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('jwt_token')}` },
+        body: JSON.stringify({ stock_quantity: parseInt(newStock) })
+    });
+    const d = await res.json();
+    if (res.ok) { showToast(d.message); fetchERPProducts(1); loadPublicProducts(); } else { showToast(d.message || d.error, 'error'); }
+};
+
+window.makeSaleInDB = async function(productId) {
+    const qty = prompt("Satılan miqdarı daxil edin:");
+    if (!qty || isNaN(qty) || parseInt(qty) <= 0) return showToast("Düzgün satış miqdarı daxil edin!", 'error');
+
+    const res = await fetch(`${API_URL}/sales`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('jwt_token')}` },
+        body: JSON.stringify({ product_id: productId, quantity: parseInt(qty) })
+    });
+    const d = await res.json();
+    if (res.ok) { showToast(d.message); fetchERPProducts(3); loadPublicProducts(); } else { showToast(d.message || d.error, 'error'); }
+};
 
 window.filterPublicProducts = function() {
     const q = document.getElementById('public-search').value.toLowerCase();
