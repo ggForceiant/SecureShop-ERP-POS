@@ -14,11 +14,7 @@ body {
     padding: 24px 40px;
 }
 
-.hidden {
-    display: none !important;
-}
-
-/* --- Header / Top Bar --- */
+/* --- Navigation Header --- */
 .navbar {
     display: flex;
     justify-content: space-between;
@@ -28,7 +24,6 @@ body {
     border-radius: 14px;
     margin-bottom: 30px;
     border: 1px solid #1e293b;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 .logo-section {
@@ -47,80 +42,39 @@ body {
     align-items: center;
     justify-content: center;
     color: #ffffff;
-    font-size: 1.1rem;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
-.logo-text h1 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #ffffff;
-}
+.logo-text h1 { font-size: 1.25rem; font-weight: 700; color: #ffffff; }
+.logo-text p { font-size: 0.72rem; color: #818cf8; font-family: monospace; }
 
-.logo-text p {
-    font-size: 0.72rem;
-    color: #818cf8;
-    font-family: monospace;
-}
+.nav-buttons { display: flex; align-items: center; gap: 12px; }
 
-.nav-buttons {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.btn-cart-nav {
+.btn-cart-nav, .btn-login-nav, .btn-panel-nav, .btn-logout-nav {
     background-color: #1e293b;
     color: #e2e8f0;
     border: 1px solid #334155;
-    padding: 9px 22px;
+    padding: 9px 20px;
     border-radius: 20px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
     transition: all 0.2s;
 }
 
-.btn-cart-nav i { color: #818cf8; }
-.btn-cart-nav:hover { border-color: #6366f1; color: #ffffff; }
-
-#auth-buttons button {
+.btn-login-nav, .btn-panel-nav {
     background-color: #4f46e5;
     color: #ffffff;
     border: none;
-    padding: 9px 22px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
-    transition: all 0.2s;
 }
 
-/* --- Vitrin Section Və Grid --- */
-.storefront-section, .dashboard-section {
-    max-width: 1280px;
-    margin: 0 auto;
-}
+.btn-cart-nav:hover { border-color: #6366f1; color: #ffffff; }
 
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-}
-
-.section-header h2 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+/* --- 4 Sütunlu Kart Şəbəkəsi --- */
+.storefront-section, .dashboard-section { max-width: 1280px; margin: 0 auto; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 
 .search-input {
     background-color: #111726;
@@ -128,11 +82,9 @@ body {
     border-radius: 10px;
     padding: 8px 16px;
     color: #ffffff;
-    font-size: 0.85rem;
     outline: none;
 }
 
-/* 4-Sütunlu Tam Grid Layout */
 .product-grid {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
@@ -147,20 +99,13 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    transition: transform 0.2s, border-color 0.2s;
-}
-
-.product-card-item:hover {
-    transform: translateY(-4px);
-    border-color: #334155;
 }
 
 .product-img-wrapper {
     position: relative;
     width: 100%;
-    height: 180px;
+    height: 170px;
     background-color: #0f172a;
-    overflow: hidden;
 }
 
 .product-img-wrapper img {
@@ -182,22 +127,9 @@ body {
     font-family: monospace;
 }
 
-.product-info {
-    padding: 16px;
-}
-
-.product-info h3 {
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: #ffffff;
-    margin-bottom: 6px;
-}
-
-.price-tag {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #6366f1;
-}
+.product-info { padding: 16px; }
+.product-info h3 { font-size: 0.92rem; font-weight: 600; color: #ffffff; margin-bottom: 6px; }
+.price-tag { font-size: 0.95rem; font-weight: 700; color: #818cf8; }
 
 .btn-cart-add {
     width: 100%;
@@ -209,14 +141,9 @@ body {
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
 }
 
-.btn-cart-add:hover {
-    background-color: #4f46e5;
-    color: #ffffff;
-    border-color: #6366f1;
-}
+.btn-cart-add:hover { background-color: #4f46e5; color: #ffffff; border-color: #6366f1; }
 
 /* Modallar */
 .modal-overlay {
@@ -267,24 +194,8 @@ body {
     cursor: pointer;
 }
 
-.cart-item-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid #1e293b;
-}
+.cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #1e293b; }
+.cart-summary-row { display: flex; justify-content: space-between; margin: 20px 0; font-weight: 700; }
 
-.cart-summary-row {
-    display: flex;
-    justify-content: space-between;
-    margin: 20px 0;
-    font-weight: 700;
-}
-
-@media (max-width: 1024px) {
-    .product-grid { grid-template-columns: repeat(2, 1fr) !important; }
-}
-@media (max-width: 600px) {
-    .product-grid { grid-template-columns: 1fr !important; }
-}
+@media (max-width: 1024px) { .product-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+@media (max-width: 600px) { .product-grid { grid-template-columns: 1fr !important; } }
