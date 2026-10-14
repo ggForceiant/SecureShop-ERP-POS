@@ -15,11 +15,15 @@ app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 app.use(express.json({ limit: '10kb' }));
 const path = require('path'); // Əgər yuxarıda require('path') yoxdursa bunu əlavə edin
 
-// 1. Qovluqdakı HTML, CSS, JS fayllarını statik olaraq xaricə açır
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// 2. Bütün bilinməyən GET sorğularını index.html faylına yönləndiririk (Single Page Application dəstəyi)
+app.get('*', (req, res, next) => {
+    // Əgər sorğu API-yə göndərilibsə, onu ötürürük API router-lərə
+    if (req.url.startsWith('/api')) {
+        return next();
+    }
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 // Supabase PostgreSQL Bağlantısı
 const pool = new Pool({
