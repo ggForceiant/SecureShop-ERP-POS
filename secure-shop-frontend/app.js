@@ -1,4 +1,3 @@
-// Render üzərində dinamik nisbi API URL, local üçün 5000 portu
 const API_URL = (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:5000/api'
     : '/api';
@@ -13,7 +12,7 @@ function sanitizeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-// Şəkillər yüklənmədikdə istifadə olunacaq etibarlı tünd SVG kart görünüşü
+// Düzgün SVG Data-URI (şəkillər bloka düşməsin deyə)
 const DEFAULT_IMAGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='100%' height='100%' fill='%230f172a'/><text x='50%' y='50%' font-family='sans-serif' font-size='16' font-weight='bold' fill='%23818cf8' text-anchor='middle'>SecureShop Product</text></svg>";
 
 const PRODUCT_IMAGES = {
@@ -28,7 +27,23 @@ const PRODUCT_IMAGES = {
 let publicProducts = [];
 let cart = [];
 
-// Funksiyaları HTML onclick hadisələri üçün qlobal window obyektinə ixrac edirik
+// Müasir Toast Bildiriş Funksiyası (Alert Əvəzi)
+function showToast(message, type = 'success') {
+    let toast = document.getElementById('toast-notification');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast-notification';
+        toast.className = 'toast-box';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.backgroundColor = type === 'error' ? '#f43f5e' : '#10b981';
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
 window.showStorefront = function() {
     document.getElementById('storefront-section').style.display = 'block';
     document.getElementById('login-section').style.display = 'none';
@@ -59,7 +74,7 @@ window.addToCartById = function(productId) {
     if (!product) return;
     cart.push({ id: product.product_id, name: product.product_name, price: parseFloat(product.price) });
     document.getElementById('cart-count').textContent = cart.length;
-    alert(`"${product.product_name}" səbətə əlavə olundu!`);
+    showToast(`"${product.product_name}" səbətə əlavə olundu!`);
 };
 
 window.removeFromCart = function(index) {
@@ -69,7 +84,7 @@ window.removeFromCart = function(index) {
 };
 
 window.checkoutCart = async function() {
-    if (cart.length === 0) return alert("Səbətiniz boşdur!");
+    if (cart.length === 0) return showToast("Səbətiniz boşdur!", 'error');
 
     try {
         for (const item of cart) {
@@ -79,13 +94,13 @@ window.checkoutCart = async function() {
                 body: JSON.stringify({ product_id: item.id, quantity: 1 })
             });
         }
-        alert("Sifarişiniz uğurla tamamlandı!");
+        showToast("Sifarişiniz uğurla tamamlandı!");
         cart = [];
         document.getElementById('cart-count').textContent = '0';
         window.toggleCartModal();
         await loadPublicProducts();
     } catch (err) {
-        alert("Sifariş zamanı xəta baş verdi.");
+        showToast("Sifariş zamanı xəta baş verdi.", 'error');
     }
 };
 
@@ -120,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('user', JSON.stringify({ username: data.username, access_level: data.access_level }));
                     updateAuthHeader();
                     window.showDashboardSection();
+                    showToast("Uğurla daxil oldunuz!");
                 } else {
                     errorDiv.textContent = sanitizeHTML(data.message || 'Giriş xətası');
                     errorDiv.style.display = 'block';

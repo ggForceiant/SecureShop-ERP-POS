@@ -14,7 +14,30 @@ body {
     padding: 24px 40px;
 }
 
-/* --- Navigation Header --- */
+/* Toast Notification Styles */
+.toast-box {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background-color: #10b981;
+    color: #ffffff;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.toast-box.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .navbar {
     display: flex;
     justify-content: space-between;
@@ -72,7 +95,6 @@ body {
 
 .btn-cart-nav:hover { border-color: #6366f1; color: #ffffff; }
 
-/* --- 4 Sütunlu Kart Şəbəkəsi --- */
 .storefront-section, .dashboard-section { max-width: 1280px; margin: 0 auto; }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 
@@ -145,7 +167,6 @@ body {
 
 .btn-cart-add:hover { background-color: #4f46e5; color: #ffffff; border-color: #6366f1; }
 
-/* Modallar */
 .modal-overlay {
     position: fixed;
     inset: 0;
