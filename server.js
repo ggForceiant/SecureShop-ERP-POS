@@ -7,15 +7,21 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { encrypt } = require('./crypto');
+const path = require('path');
 
 const app = express();
 
-app.use(helmet({ crossOriginResourcePolicy: false }));
+// Xarici CDN-lərin (FontAwesome, Unsplash, Tailwind) bloklanmaması üçün helmet ayarı
+app.use(helmet({ 
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: false 
+}));
+
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 app.use(express.json({ limit: '10kb' }));
-const path = require('path'); // Əgər yuxarıda require('path') yoxdursa bunu əlavə edin
 
 // 1. Frontend fayllarını secure-shop-frontend papkasından oxuyuruq
+app.use(express.static(path.join(__dirname, '../secure-shop-frontend')));
 app.use(express.static(path.join(__dirname, 'secure-shop-frontend')));
 
 // 2. Bütün UI marşrutlarını secure-shop-frontend/index.html faylına yönləndiririk
@@ -23,8 +29,13 @@ app.get('*', (req, res, next) => {
     if (req.url.startsWith('/api')) {
         return next();
     }
-    res.sendFile(path.join(__dirname, 'secure-shop-frontend', 'index.html'));
+    res.sendFile(path.join(__dirname, '../secure-shop-frontend', 'index.html'), (err) => {
+        if (err) {
+            res.sendFile(path.join(__dirname, 'secure-shop-frontend', 'index.html'));
+        }
+    });
 });
+
 // Supabase PostgreSQL Bağlantısı
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
