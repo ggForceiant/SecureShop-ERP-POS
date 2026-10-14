@@ -12,7 +12,7 @@
 
     <!-- Header / Navbar -->
     <header class="navbar">
-        <div class="logo-section" onclick="showStorefront()">
+        <div class="logo-section" onclick="window.showStorefront()">
             <div class="logo-shield">
                 <i class="fa-solid fa-shield-halved"></i>
             </div>
@@ -23,7 +23,7 @@
         </div>
 
         <div class="nav-buttons">
-            <button onclick="toggleCartModal()" class="btn-cart-nav">
+            <button onclick="window.toggleCartModal()" class="btn-cart-nav">
                 <i class="fa-solid fa-basket-shopping"></i> Səbət ( <span id="cart-count">0</span> )
             </button>
             <div id="auth-buttons"></div>
@@ -36,7 +36,7 @@
             <h2>
                 <i class="fa-solid fa-store"></i> Məhsul Kataloqu
             </h2>
-            <input type="text" id="public-search" onkeyup="filterPublicProducts()" placeholder="Axtar..." class="search-input">
+            <input type="text" id="public-search" onkeyup="window.filterPublicProducts()" placeholder="Axtar..." class="search-input">
         </div>
         <div id="public-products-grid" class="product-grid"></div>
     </section>
@@ -44,7 +44,7 @@
     <!-- Login Modal -->
     <div id="login-section" class="modal-overlay hidden">
         <div class="login-modal-card">
-            <button onclick="showStorefront()" class="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+            <button onclick="window.showStorefront()" class="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
             <h2>Sistemə Giriş</h2>
             <form id="login-form">
                 <div class="form-group">
@@ -92,17 +92,18 @@
         <div class="cart-modal-card">
             <div class="cart-header">
                 <h3>Məhsul Səbəti</h3>
-                <button onclick="toggleCartModal()" class="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="window.toggleCartModal()" class="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="cart-items" class="cart-items-container"></div>
             <div class="cart-summary-row">
                 <span>Cəmi:</span>
                 <span id="cart-total">0.00 AZN</span>
             </div>
-            <button onclick="checkoutCart()" class="btn-checkout">Sifarişi Tamamla</button>
+            <button onclick="window.checkoutCart()" class="btn-checkout">Sifarişi Tamamla</button>
         </div>
     </div>
 
+    <!-- Sona yükləyirik ki DOM elementləri hazır olsun -->
     <script src="app.js"></script>
 </body>
 </html>
