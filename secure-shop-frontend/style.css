@@ -408,3 +408,59 @@ table td {
     .product-grid { grid-template-columns: 1fr; }
     .navbar { flex-direction: column; gap: 15px; }
 }
+/* Dynamically generated product cards from app.js */
+#public-products-grid > div {
+    background-color: #111726;
+    border: 1px solid #1e293b;
+    border-radius: 14px;
+    overflow: hidden;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+#public-products-grid > div:hover {
+    transform: translateY(-4px);
+    border-color: #334155;
+}
+
+#public-products-grid img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+#public-products-grid button {
+    width: 100%;
+    background-color: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.2s;
+}
+
+#public-products-grid button:hover {
+    background-color: #334155;
+    color: #ffffff;
+}
+
+#auth-buttons button {
+    background-color: #4f46e5;
+    color: #ffffff;
+    border: none;
+    padding: 9px 22px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+}

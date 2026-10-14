@@ -1,5 +1,8 @@
-const API_URL = 'http://localhost:5000/api';
-
+// Render üçün dinamik API URL
+// Localde veya file:// protokolünde 5000 portuna yönlendir, Render'da nisbi /api yolunu kullan
+const API_URL = (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:5000/api'
+    : '/api';
 // OWASP A03: Cross-Site Scripting (XSS) Təmizləmə Funksiyası
 function sanitizeHTML(str) {
     if (!str) return '';
@@ -40,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function updateAuthHeader() {
     const token = localStorage.getItem('jwt_token');
     const authContainer = document.getElementById('auth-buttons');
+    if (!authContainer) return;
     
     if (token) {
         authContainer.innerHTML = `
@@ -152,7 +156,6 @@ function removeFromCart(index) {
     renderCartItems();
 }
 
-// SƏBƏTDƏN SİFARİŞ VERİLDİKDƏ BAZADA STOKU AZALTMAQ
 async function checkoutCart() {
     if (cart.length === 0) return alert("Səbətiniz boşdur!");
 
@@ -174,7 +177,7 @@ async function checkoutCart() {
         cart = [];
         document.getElementById('cart-count').textContent = '0';
         toggleCartModal();
-        await loadPublicProducts(); // Vitrindəki sayı anında yeniləyir
+        await loadPublicProducts();
     } catch (err) {
         console.error("Checkout Error:", err);
         alert("Sifariş zamanı xəta baş verdi.");
@@ -208,33 +211,35 @@ function logout() {
 }
 
 // İŞÇİ GİRİŞİ (LOGIN)
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const errorDiv = document.getElementById('login-error');
+document.addEventListener('submit', async (e) => {
+    if (e.target && e.target.id === 'login-form') {
+        e.preventDefault();
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const errorDiv = document.getElementById('login-error');
 
-    try {
-        const response = await fetch(`${API_URL}/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
+        try {
+            const response = await fetch(`${API_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (response.ok) {
-            localStorage.setItem('jwt_token', data.token);
-            localStorage.setItem('user', JSON.stringify({ username: data.username, access_level: data.access_level }));
-            updateAuthHeader();
-            showDashboardSection();
-        } else {
-            errorDiv.textContent = sanitizeHTML(data.message || 'Giriş xətası');
+            if (response.ok) {
+                localStorage.setItem('jwt_token', data.token);
+                localStorage.setItem('user', JSON.stringify({ username: data.username, access_level: data.access_level }));
+                updateAuthHeader();
+                showDashboardSection();
+            } else {
+                errorDiv.textContent = sanitizeHTML(data.message || 'Giriş xətası');
+                errorDiv.classList.remove('hidden');
+            }
+        } catch (err) {
+            errorDiv.textContent = 'Serverlə əlaqə qurulmadı.';
             errorDiv.classList.remove('hidden');
         }
-    } catch (err) {
-        errorDiv.textContent = 'Serverlə əlaqə qurulmadı.';
-        errorDiv.classList.remove('hidden');
     }
 });
 
@@ -294,7 +299,7 @@ function renderERPTable(products, accessLevel) {
     });
 }
 
-// ADMIN STOK REDAKTƏSİ (AES-256 LOGLU)
+// ADMIN STOK REDAKTƏSİ
 async function updateStockInDB(productId) {
     const newStock = prompt("Yeni stok miqdarını daxil edin:");
     if (!newStock || isNaN(newStock) || parseInt(newStock) < 0) return alert("Düzgün stok daxil edin!");
@@ -322,7 +327,6 @@ async function makeSaleInDB(productId) {
     if (res.ok) { alert(d.message); fetchERPProducts(3); loadPublicProducts(); } else { alert(d.message || d.error); }
 }
 
-// AXTARIŞ
 function filterPublicProducts() {
     const q = document.getElementById('public-search').value.toLowerCase();
     const filtered = publicProducts.filter(p => p.product_name.toLowerCase().includes(q));
