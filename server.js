@@ -13,7 +13,15 @@ const app = express();
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 app.use(express.json({ limit: '10kb' }));
+const path = require('path'); // Əgər yuxarıda require('path') yoxdursa bunu əlavə edin
 
+// 1. Qovluqdakı HTML, CSS, JS fayllarını statik olaraq xaricə açır
+app.use(express.static(__dirname));
+
+// 2. Ana ünvana (/) girəndə index.html faylını göstərir
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 // Supabase PostgreSQL Bağlantısı
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
