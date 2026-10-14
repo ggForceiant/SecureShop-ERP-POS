@@ -4,105 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureShop - Secure ERP & Store</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome İkonaları -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+<body>
 
     <!-- Header / Navbar -->
-    <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3 cursor-pointer" onclick="showStorefront()">
-                <div class="bg-indigo-600 p-2.5 rounded-xl text-white">
-                    <i class="fa-solid fa-shield-halved text-lg"></i>
-                </div>
-                <div>
-                    <span class="font-bold text-lg leading-none block">SecureShop</span>
-                    <span class="text-[10px] text-indigo-400 font-mono">OWASP Compliant ERP</span>
-                </div>
+    <header class="navbar">
+        <div class="logo-section" onclick="showStorefront()">
+            <div class="logo-shield">
+                <i class="fa-solid fa-shield-halved"></i>
             </div>
+            <div class="logo-text">
+                <h1>SecureShop</h1>
+                <p>OWASP Compliant ERP</p>
+            </div>
+        </div>
 
-            <div class="flex items-center gap-4">
-                <button onclick="toggleCartModal()" class="bg-slate-800 text-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-700 flex items-center gap-2">
-                    <i class="fa-solid fa-basket-shopping text-indigo-400"></i> Səbət (<span id="cart-count">0</span>)
-                </button>
-                <div id="auth-buttons"></div>
-            </div>
+        <div class="nav-buttons">
+            <button onclick="toggleCartModal()" class="btn-cart-nav">
+                <i class="fa-solid fa-basket-shopping"></i> Səbət ( <span id="cart-count">0</span> )
+            </button>
+            <div id="auth-buttons"></div>
         </div>
     </header>
 
     <!-- Public Storefront -->
-    <section id="storefront-section" class="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        <div class="flex justify-between items-center">
-            <h2 class="text-lg font-bold flex items-center gap-2">
-                <i class="fa-solid fa-store text-indigo-400"></i> Məhsul Kataloqu
+    <section id="storefront-section" class="storefront-section">
+        <div class="section-header">
+            <h2>
+                <i class="fa-solid fa-store"></i> Məhsul Kataloqu
             </h2>
-            <input type="text" id="public-search" onkeyup="filterPublicProducts()" placeholder="Axtar..." 
-                   class="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-indigo-500">
+            <input type="text" id="public-search" onkeyup="filterPublicProducts()" placeholder="Axtar..." class="search-input">
         </div>
-        <div id="public-products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6"></div>
+        <div id="public-products-grid" class="product-grid"></div>
     </section>
 
     <!-- Login Modal -->
-    <div id="login-section" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md relative">
-            <button onclick="showStorefront()" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300"><i class="fa-solid fa-xmark text-lg"></i></button>
-            <h2 class="text-xl font-bold text-center mb-4">Sistemə Giriş</h2>
-            <form id="login-form" class="space-y-4">
-                <div>
-                    <label class="block text-xs uppercase text-slate-400 mb-1">İstifadəçi Adı</label>
-                    <input type="text" id="username" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+    <div id="login-section" class="modal-overlay hidden">
+        <div class="login-modal-card">
+            <button onclick="showStorefront()" class="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+            <h2>Sistemə Giriş</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>İstifadəçi Adı</label>
+                    <input type="text" id="username" required placeholder="İstifadəçi adınızı daxil edin">
                 </div>
-                <div>
-                    <label class="block text-xs uppercase text-slate-400 mb-1">Şifrə</label>
-                    <input type="password" id="password" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                <div class="form-group">
+                    <label>Şifrə</label>
+                    <input type="password" id="password" required placeholder="••••••••">
                 </div>
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-xl text-sm transition-all">Giriş</button>
+                <button type="submit" class="btn-submit">Giriş</button>
             </form>
-            <div id="login-error" class="mt-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl hidden"></div>
+            <div id="login-error" class="login-error-box hidden"></div>
         </div>
     </div>
 
     <!-- ERP Dashboard -->
-    <div id="dashboard-section" class="hidden max-w-7xl mx-auto px-6 py-6 space-y-6">
-        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex justify-between items-center">
+    <div id="dashboard-section" class="dashboard-section hidden">
+        <div class="user-banner">
             <div>
-                <h3 id="user-display" class="font-bold text-sm"></h3>
-                <p id="role-permissions-desc" class="text-xs text-slate-400"></p>
+                <h3 id="user-display"></h3>
+                <p id="role-permissions-desc"></p>
             </div>
-            <div id="role-badge" class="px-3 py-1 rounded-full text-xs font-bold uppercase"></div>
+            <div id="role-badge" class="role-badge-box"></div>
         </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-            <table class="w-full text-left border-collapse">
+        <div class="table-card">
+            <table>
                 <thead>
-                    <tr class="bg-slate-950 text-slate-400 text-[11px] uppercase border-b border-slate-800">
-                        <th class="p-3.5">ID</th>
-                        <th class="p-3.5">Məhsul Adı</th>
-                        <th class="p-3.5">Qiymət</th>
-                        <th class="p-3.5">Stok</th>
-                        <th class="p-3.5 text-right">Əməliyyat</th>
+                    <tr>
+                        <th>ID</th>
+                        <th>Məhsul Adı</th>
+                        <th>Qiymət</th>
+                        <th>Stok</th>
+                        <th style="text-align: right;">Əməliyyat</th>
                     </tr>
                 </thead>
-                <tbody id="products-tbody" class="divide-y divide-slate-800 text-xs"></tbody>
+                <tbody id="products-tbody"></tbody>
             </table>
         </div>
     </div>
 
     <!-- Səbət Modalı -->
-    <div id="cart-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                <h3 class="font-bold text-sm">Məhsul Səbəti</h3>
-                <button onclick="toggleCartModal()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+    <div id="cart-modal" class="modal-overlay hidden">
+        <div class="cart-modal-card">
+            <div class="cart-header">
+                <h3>Məhsul Səbəti</h3>
+                <button onclick="toggleCartModal()" class="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div id="cart-items" class="space-y-2 max-h-48 overflow-y-auto"></div>
-            <div class="flex justify-between font-bold pt-2 border-t border-slate-800">
+            <div id="cart-items" class="cart-items-container"></div>
+            <div class="cart-summary-row">
                 <span>Cəmi:</span>
-                <span id="cart-total" class="text-indigo-400">0.00 AZN</span>
+                <span id="cart-total">0.00 AZN</span>
             </div>
-            <button onclick="checkoutCart()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl text-xs font-bold transition-all">Sifarişi Tamamla</button>
+            <button onclick="checkoutCart()" class="btn-checkout">Sifarişi Tamamla</button>
         </div>
     </div>
 
