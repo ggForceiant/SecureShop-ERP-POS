@@ -12,21 +12,11 @@ function sanitizeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-// Güvenli SVG Yedeği (Görseller yüklenemezse devreye girer)
 const DEFAULT_IMAGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='100%' height='100%' fill='%230f172a'/><text x='50%' y='50%' font-family='sans-serif' font-size='16' font-weight='bold' fill='%23818cf8' text-anchor='middle'>SecureShop Məhsul</text></svg>";
 
-const PRODUCT_IMAGES = {
-    'Noutbuk Dell XPS 15': 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=400&q=80',
-    'Simsiz Qulaqlıq Sony WH-1000XM5': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=400&q=80',
-    'Mexaniki Klaviatura Keychron K2': 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=400&q=80',
-    'Barkod Skaner Honeywell 1D/2D': 'https://images.unsplash.com/photo-1556742049-0a67e0a29ef3?auto=format&fit=crop&w=400&q=80',
-    'Termal Çek Çap Edici (80mm)': 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=400&q=80',
-    'Təhlükəsizlik Kamerası Hikvision 4K': 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&w=400&q=80'
-};
-
 const ROLES = {
-    1: { name: 'Admin (Level 1)', color: 'badge-admin', desc: 'Sistem Administrasiyası: Stok dəyişmə və AES-256 Log' },
-    2: { name: 'Manager (Level 2)', color: 'badge-manager', desc: 'Menecer: Məhsul və hesabatlara baxış yetkisi' },
+    1: { name: 'Admin (Level 1)', color: 'badge-admin', desc: 'Sistem Administrasiyası: Stok dəyişmə, məhsul idarəsi və AES-256 Log' },
+    2: { name: 'Manager (Level 2)', color: 'badge-manager', desc: 'Menecer: Yeni məhsul əlavə etmə və məhsul silmə yetkisi' },
     3: { name: 'Operator (Level 3)', color: 'badge-operator', desc: 'Operator / Kassir: Satış icra etmə yetkisi' },
     4: { name: 'Viewer (Level 4)', color: 'badge-viewer', desc: 'Müşahidəçi: Yalnız baxış hüququ' }
 };
@@ -73,6 +63,12 @@ window.toggleCartModal = function() {
     if (modal.style.display === 'flex') renderCartItems();
 };
 
+window.toggleProductModal = function() {
+    const modal = document.getElementById('product-modal');
+    if (!modal) return;
+    modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+};
+
 window.addToCartById = function(productId) {
     const product = publicProducts.find(p => p.product_id === productId);
     if (!product) return;
@@ -87,24 +83,103 @@ window.removeFromCart = function(index) {
     renderCartItems();
 };
 
-window.checkoutCart = async function() {
+window.submitCheckout = async function(e) {
+    e.preventDefault();
     if (cart.length === 0) return showToast("Səbətiniz boşdur!", 'error');
 
+    const customer_name = document.getElementById('cust-name').value.trim();
+    const phone_number = document.getElementById('cust-phone').value.trim();
+    const card_number = document.getElementById('card-num').value.trim();
+    const exp_date = document.getElementById('card-exp').value.trim();
+    const cvv = document.getElementById('card-cvv').value.trim();
+
+    let total = cart.reduce((sum, item) => sum + item.price, 0);
+
     try {
-        for (const item of cart) {
-            await fetch(`${API_URL}/sales`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ product_id: item.id, quantity: 1 })
-            });
+        const response = await fetch(`${API_URL}/orders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                customer_name,
+                phone_number,
+                card_number,
+                exp_date,
+                cvv,
+                items: cart,
+                total_amount: total
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast("Sifarişiniz uğurla qəbul edildi!");
+            cart = [];
+            document.getElementById('cart-count').textContent = '0';
+            document.getElementById('checkout-form').reset();
+            window.toggleCartModal();
+            await loadPublicProducts();
+        } else {
+            showToast(data.message || "Sifariş zamanı xəta baş verdi.", 'error');
         }
-        showToast("Sifarişiniz uğurla tamamlandı!");
-        cart = [];
-        document.getElementById('cart-count').textContent = '0';
-        window.toggleCartModal();
-        await loadPublicProducts();
     } catch (err) {
-        showToast("Sifariş zamanı xəta baş verdi.", 'error');
+        showToast("Serverlə əlaqə qurulmadı.", 'error');
+    }
+};
+
+window.submitAddProduct = async function(e) {
+    e.preventDefault();
+    const product_name = document.getElementById('new-prod-name').value.trim();
+    const price = document.getElementById('new-prod-price').value.trim();
+    const stock_quantity = document.getElementById('new-prod-stock').value.trim();
+    const image_url = document.getElementById('new-prod-image').value.trim();
+
+    try {
+        const response = await fetch(`${API_URL}/products`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            },
+            body: JSON.stringify({ product_name, price, stock_quantity, image_url })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showToast("Məhsul uğurla əlavə olundu!");
+            document.getElementById('add-product-form').reset();
+            window.toggleProductModal();
+            fetchERPProducts(JSON.parse(localStorage.getItem('user')).access_level);
+            loadPublicProducts();
+        } else {
+            showToast(data.message || "Xəta baş verdi.", 'error');
+        }
+    } catch (err) {
+        showToast("Serverlə əlaqə qurulmadı.", 'error');
+    }
+};
+
+window.deleteProductFromDB = async function(productId) {
+    if (!confirm("Bu məhsulu silməyə əminsiniz?")) return;
+
+    try {
+        const response = await fetch(`${API_URL}/products/${productId}`, {
+            method: 'DELETE',
+            headers: { 
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            }
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showToast("Məhsul silindi!");
+            fetchERPProducts(JSON.parse(localStorage.getItem('user')).access_level);
+            loadPublicProducts();
+        } else {
+            showToast(data.message || "Silinmə zamanı xəta baş verdi.", 'error');
+        }
+    } catch (err) {
+        showToast("Serverlə əlaqə qurulmadı.", 'error');
     }
 };
 
@@ -191,7 +266,7 @@ function renderPublicProducts(products) {
         const name = sanitizeHTML(p.product_name);
         const price = parseFloat(p.price).toFixed(2);
         const stock = parseInt(p.stock_quantity);
-        const imgUrl = PRODUCT_IMAGES[p.product_name] || DEFAULT_IMAGE;
+        const imgUrl = p.image_url || DEFAULT_IMAGE;
 
         const card = document.createElement('div');
         card.className = 'product-card-item';
@@ -248,6 +323,11 @@ async function showDashboardERP() {
     badge.textContent = roleInfo.name;
     badge.className = `role-badge-box ${roleInfo.color}`;
 
+    const addBtn = document.getElementById('btn-add-product');
+    if (addBtn) {
+        addBtn.style.display = (user.access_level === 1 || user.access_level === 2) ? 'inline-flex' : 'none';
+    }
+
     fetchERPProducts(user.access_level);
 }
 
@@ -275,7 +355,14 @@ function renderERPTable(products, accessLevel) {
 
         let actionBtn = '';
         if (accessLevel === 1) {
-            actionBtn = `<button onclick="window.updateStockInDB(${p.product_id})" class="btn-action btn-edit"><i class="fa-solid fa-pen-to-square"></i> Stoku Dəyiş</button>`;
+            actionBtn = `
+                <button onclick="window.updateStockInDB(${p.product_id})" class="btn-action btn-edit"><i class="fa-solid fa-pen-to-square"></i> Stoku Dəyiş</button>
+                <button onclick="window.deleteProductFromDB(${p.product_id})" class="btn-action" style="background-color: rgba(244, 63, 94, 0.15); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3);"><i class="fa-solid fa-trash"></i> Sil</button>
+            `;
+        } else if (accessLevel === 2) {
+            actionBtn = `
+                <button onclick="window.deleteProductFromDB(${p.product_id})" class="btn-action" style="background-color: rgba(244, 63, 94, 0.15); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3);"><i class="fa-solid fa-trash"></i> Məhsulu Sil</button>
+            `;
         } else if (accessLevel === 3) {
             actionBtn = `<button onclick="window.makeSaleInDB(${p.product_id})" class="btn-action btn-sale"><i class="fa-solid fa-cart-shopping"></i> Satış Et</button>`;
         } else {
@@ -287,7 +374,7 @@ function renderERPTable(products, accessLevel) {
             <td style="font-weight: 600; color: #e2e8f0;">${sanitizeHTML(p.product_name)}</td>
             <td style="font-family: monospace; color: #818cf8;">${p.price} AZN</td>
             <td><span class="stock-pill">${p.stock_quantity} ədəd</span></td>
-            <td style="text-align: right;">${actionBtn}</td>
+            <td style="text-align: right; display: flex; gap: 8px; justify-content: flex-end;">${actionBtn}</td>
         `;
         tbody.appendChild(tr);
     });

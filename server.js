@@ -11,7 +11,6 @@ const path = require('path');
 
 const app = express();
 
-// Xarici CDN-lərin (FontAwesome, Unsplash, Tailwind) bloklanmaması üçün helmet ayarı
 app.use(helmet({ 
     crossOriginResourcePolicy: false,
     contentSecurityPolicy: false 
@@ -20,21 +19,8 @@ app.use(helmet({
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 app.use(express.json({ limit: '10kb' }));
 
-// 1. Frontend fayllarını secure-shop-frontend papkasından oxuyuruq
 app.use(express.static(path.join(__dirname, '../secure-shop-frontend')));
 app.use(express.static(path.join(__dirname, 'secure-shop-frontend')));
-
-// 2. Bütün UI marşrutlarını secure-shop-frontend/index.html faylına yönləndiririk
-app.get('*', (req, res, next) => {
-    if (req.url.startsWith('/api')) {
-        return next();
-    }
-    res.sendFile(path.join(__dirname, '../secure-shop-frontend', 'index.html'), (err) => {
-        if (err) {
-            res.sendFile(path.join(__dirname, 'secure-shop-frontend', 'index.html'));
-        }
-    });
-});
 
 // Supabase PostgreSQL Bağlantısı
 const pool = new Pool({
@@ -123,17 +109,57 @@ app.put('/api/users/update', async (req, res) => {
     }
 });
 
-// 3. MƏHSULLARI GƏTİRMƏK
+// 3. MƏHSULLARI GƏTİRMƏK (image_url daxil olmaqla)
 app.get('/api/products', async (req, res) => {
     try {
-        const products = await pool.query('SELECT product_id, product_name, price, stock_quantity FROM public.products ORDER BY product_id ASC');
+        const products = await pool.query('SELECT product_id, product_name, price, stock_quantity, image_url FROM public.products ORDER BY product_id ASC');
         res.json(products.rows);
     } catch (err) {
         res.status(500).json({ error: "Məhsullar oxunarkən baza xətası baş verdi" });
     }
 });
 
-// 4. GİRİŞ (LOGIN)
+// 4. YENİ MƏHSUL ƏLAVƏ ETMƏK (Manager - Level 2 və Admin - Level 1)
+app.post('/api/products', authorize([1, 2]), async (req, res) => {
+    const { product_name, price, stock_quantity, image_url } = req.body;
+
+    if (!product_name || price === undefined || stock_quantity === undefined) {
+        return res.status(400).json({ message: "Məhsul adı, qiyməti və stok miqdarı daxil edilməlidir." });
+    }
+
+    const img = image_url && image_url.trim() !== '' 
+        ? image_url.trim() 
+        : 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=400&q=80';
+
+    try {
+        const result = await pool.query(
+            'INSERT INTO public.products (product_name, price, stock_quantity, image_url) VALUES ($1, $2, $3, $4) RETURNING *',
+            [product_name.trim(), parseFloat(price), parseInt(stock_quantity), img]
+        );
+        res.status(201).json({ message: "Məhsul uğurla əlavə olundu!", product: result.rows[0] });
+    } catch (err) {
+        console.error("Məhsul Əlavə Xətası:", err);
+        res.status(500).json({ error: "Məhsul əlavə edilərkən xəta baş verdi." });
+    }
+});
+
+// 5. MƏHSUL SİLMƏK (Manager - Level 2 və Admin - Level 1)
+app.delete('/api/products/:id', authorize([1, 2]), async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const delRes = await pool.query('DELETE FROM public.products WHERE product_id = $1 RETURNING *', [id]);
+        if (delRes.rowCount === 0) {
+            return res.status(404).json({ message: "Silinəcək məhsul tapılmadı." });
+        }
+        res.json({ message: "Məhsul bazadan uğurla silindi!" });
+    } catch (err) {
+        console.error("Məhsul Silmə Xətası:", err);
+        res.status(500).json({ error: "Məhsul silinərkən xəta baş verdi." });
+    }
+});
+
+// 6. GİRİŞ (LOGIN)
 app.post('/api/login', loginLimiter, async (req, res) => {
     const { username, password } = req.body;
 
@@ -170,7 +196,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     }
 });
 
-// 5. STOK YENİLƏMƏ (ADMIN)
+// 7. STOK YENİLƏMƏ (ADMIN)
 app.put('/api/products/:id/stock', authorize([1]), async (req, res) => {
     const { id } = req.params;
     const { stock_quantity } = req.body;
@@ -207,7 +233,7 @@ app.put('/api/products/:id/stock', authorize([1]), async (req, res) => {
     }
 });
 
-// 6. SATIŞ İCRASI
+// 8. SATIŞ İCRASI
 app.post('/api/sales', async (req, res) => {
     const { product_id, quantity } = req.body;
 
@@ -232,6 +258,62 @@ app.post('/api/sales', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: "Satış zamanı server xətası baş verdi" });
     }
+});
+
+// 9. SİFARİŞ VƏ ÖDƏNİŞ ENDPOINT-İ
+app.post('/api/orders', async (req, res) => {
+    const { customer_name, phone_number, card_number, exp_date, cvv, items, total_amount } = req.body;
+
+    if (!customer_name || !phone_number || !card_number || !exp_date || !cvv || !items || !items.length) {
+        return res.status(400).json({ message: "Lütfən bütün ad, soyad, əlaqə və ödəniş sahələrini doldurun." });
+    }
+
+    const cleanCard = card_number.replace(/\s+/g, '');
+    if (!/^\d{16}$/.test(cleanCard)) {
+        return res.status(400).json({ message: "Kart nömrəsi 16 rəqəmdən ibarət olmalıdır." });
+    }
+
+    if (!/^\d{3}$/.test(cvv)) {
+        return res.status(400).json({ message: "CVV kodu 3 rəqəmli olmalıdır." });
+    }
+
+    try {
+        for (const item of items) {
+            const prodCheck = await pool.query('SELECT stock_quantity FROM public.products WHERE product_id = $1', [item.id]);
+            if (prodCheck.rows.length === 0) {
+                return res.status(404).json({ message: `Məhsul tapılmadı (ID: ${item.id})` });
+            }
+            if (prodCheck.rows[0].stock_quantity < 1) {
+                return res.status(400).json({ message: `"${item.name}" məhsulundan kifayət qədər stok yoxdur.` });
+            }
+        }
+
+        for (const item of items) {
+            await pool.query('UPDATE public.products SET stock_quantity = stock_quantity - 1 WHERE product_id = $1', [item.id]);
+        }
+
+        const last4 = cleanCard.slice(-4);
+        const orderInsert = await pool.query(
+            'INSERT INTO public.orders (customer_name, phone_number, card_number_last4, order_items, total_amount) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [customer_name.trim(), phone_number.trim(), last4, JSON.stringify(items), total_amount]
+        );
+
+        res.status(201).json({ message: "Ödəniş uğurla tamamlandı! Sifarişiniz qəbul edildi.", order: orderInsert.rows[0] });
+    } catch (err) {
+        console.error("Sifariş Xətası:", err);
+        res.status(500).json({ error: "Sifariş icra olunarkən xəta baş verdi." });
+    }
+});
+
+app.get('*', (req, res, next) => {
+    if (req.url.startsWith('/api')) {
+        return next();
+    }
+    res.sendFile(path.join(__dirname, '../secure-shop-frontend', 'index.html'), (err) => {
+        if (err) {
+            res.sendFile(path.join(__dirname, 'secure-shop-frontend', 'index.html'));
+        }
+    });
 });
 
 const PORT = process.env.PORT || 5000;
