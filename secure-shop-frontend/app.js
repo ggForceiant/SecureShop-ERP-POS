@@ -40,15 +40,19 @@ function showToast(message, type = 'success') {
 
 window.showStorefront = function() {
     document.getElementById('storefront-section').style.display = 'block';
+    document.getElementById('product-detail-section').style.display = 'none';
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('dashboard-section').style.display = 'none';
+    window.scrollTo(0, 0);
 };
 
 window.showLoginSection = function() {
     document.getElementById('storefront-section').style.display = 'none';
+    document.getElementById('product-detail-section').style.display = 'none';
     document.getElementById('login-section').style.display = 'flex';
     document.getElementById('dashboard-section').style.display = 'none';
 };
+
 window.togglePasswordVisibility = function() {
     const passwordInput = document.getElementById('password');
     const icon = document.getElementById('toggle-password-icon');
@@ -65,8 +69,10 @@ window.togglePasswordVisibility = function() {
         icon.classList.add('fa-eye');
     }
 };
+
 window.showDashboardSection = function() {
     document.getElementById('storefront-section').style.display = 'none';
+    document.getElementById('product-detail-section').style.display = 'none';
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('dashboard-section').style.display = 'block';
     showDashboardERP();
@@ -97,6 +103,107 @@ window.removeFromCart = function(index) {
     document.getElementById('cart-count').textContent = cart.length;
     renderCartItems();
 };
+
+// MƏHSUL DETAL SƏHİFƏSİNİ AÇMAQ
+window.openProductDetail = function(productId) {
+    const product = publicProducts.find(p => p.product_id === productId);
+    if (!product) return;
+
+    document.getElementById('storefront-section').style.display = 'none';
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('dashboard-section').style.display = 'none';
+    document.getElementById('product-detail-section').style.display = 'block';
+
+    // Detalları doldururuq
+    document.getElementById('detail-title').textContent = product.product_name;
+    document.getElementById('detail-price').textContent = `${parseFloat(product.price).toFixed(2)} AZN`;
+    document.getElementById('detail-stock-badge').textContent = `Stok: ${product.stock_quantity} ədəd`;
+    document.getElementById('detail-description').textContent = product.description || "Bu məhsul üçün ətraflı təsvir daxil edilməyib.";
+
+    const mainImg = document.getElementById('detail-main-img');
+    const mainImgUrl = product.image_url || DEFAULT_IMAGE;
+    mainImg.src = mainImgUrl;
+
+    // Galereya şəkilləri (Əsas şəkil + əlavə şəkillər)
+    const thumbsGrid = document.getElementById('detail-thumbs-grid');
+    thumbsGrid.innerHTML = '';
+
+    let gallery = [mainImgUrl];
+    if (product.gallery_images) {
+        try {
+            const parsed = typeof product.gallery_images === 'string' ? JSON.parse(product.gallery_images) : product.gallery_images;
+            if (Array.isArray(parsed)) gallery = gallery.concat(parsed);
+        } catch (e) {}
+    }
+
+    gallery.forEach((url, idx) => {
+        const thumb = document.createElement('div');
+        thumb.className = `thumb-item ${idx === 0 ? 'active' : ''}`;
+        thumb.innerHTML = `<img src="${url}" alt="Thumb" onerror="this.src='${DEFAULT_IMAGE}'">`;
+        thumb.onclick = () => {
+            document.querySelectorAll('.thumb-item').forEach(el => el.classList.remove('active'));
+            thumb.classList.add('active');
+            mainImg.src = url;
+        };
+        thumbsGrid.appendChild(thumb);
+    });
+
+    // Səbətə əlavə et düyməsi
+    const addCartBtn = document.getElementById('detail-add-cart-btn');
+    addCartBtn.onclick = () => window.addToCartById(product.product_id);
+
+    // Oxşar məhsulları render etmək (Adlarına uyğun olaraq)
+    renderSimilarProducts(product);
+
+    window.scrollTo(0, 0);
+};
+
+// Oxşar Məhsullar
+function renderSimilarProducts(currentProduct) {
+    const grid = document.getElementById('similar-products-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const firstWord = currentProduct.product_name.split(' ')[0].toLowerCase();
+    
+    let similar = publicProducts.filter(p => 
+        p.product_id !== currentProduct.product_id && 
+        p.product_name.toLowerCase().includes(firstWord)
+    );
+
+    if (similar.length === 0) {
+        similar = publicProducts.filter(p => p.product_id !== currentProduct.product_id).slice(0, 4);
+    } else {
+        similar = similar.slice(0, 4);
+    }
+
+    similar.forEach(p => {
+        const id = p.product_id;
+        const name = sanitizeHTML(p.product_name);
+        const price = parseFloat(p.price).toFixed(2);
+        const stock = parseInt(p.stock_quantity);
+        const imgUrl = p.image_url || DEFAULT_IMAGE;
+
+        const card = document.createElement('div');
+        card.className = 'product-card-item';
+        card.innerHTML = `
+            <div class="product-img-wrapper" onclick="window.openProductDetail(${id})">
+                <img src="${imgUrl}" alt="${name}" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
+                <span class="stock-badge">Stok: ${stock}</span>
+            </div>
+            <div class="product-info" onclick="window.openProductDetail(${id})">
+                <h3>${name}</h3>
+                <p class="price-tag">${price} AZN</p>
+            </div>
+            <div style="padding: 0 16px 16px 16px;">
+                <button onclick="window.addToCartById(${id})" class="btn-cart-add">
+                    <i class="fa-solid fa-cart-plus"></i> Səbətə Əlavə Et
+                </button>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
 
 window.submitCheckout = async function(e) {
     e.preventDefault();
@@ -148,6 +255,13 @@ window.submitAddProduct = async function(e) {
     const price = document.getElementById('new-prod-price').value.trim();
     const stock_quantity = document.getElementById('new-prod-stock').value.trim();
     const image_url = document.getElementById('new-prod-image').value.trim();
+    const description = document.getElementById('new-prod-desc').value.trim();
+    const galleryInput = document.getElementById('new-prod-gallery').value.trim();
+
+    let gallery_images = [];
+    if (galleryInput) {
+        gallery_images = galleryInput.split(',').map(url => url.trim()).filter(url => url !== '');
+    }
 
     try {
         const response = await fetch(`${API_URL}/products`, {
@@ -156,7 +270,7 @@ window.submitAddProduct = async function(e) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
             },
-            body: JSON.stringify({ product_name, price, stock_quantity, image_url })
+            body: JSON.stringify({ product_name, price, stock_quantity, image_url, description, gallery_images })
         });
 
         const data = await response.json();
@@ -286,11 +400,11 @@ function renderPublicProducts(products) {
         const card = document.createElement('div');
         card.className = 'product-card-item';
         card.innerHTML = `
-            <div class="product-img-wrapper">
+            <div class="product-img-wrapper" onclick="window.openProductDetail(${id})">
                 <img src="${imgUrl}" alt="${name}" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
                 <span class="stock-badge">Stok: ${stock}</span>
             </div>
-            <div class="product-info">
+            <div class="product-info" onclick="window.openProductDetail(${id})">
                 <h3>${name}</h3>
                 <p class="price-tag">${price} AZN</p>
             </div>

@@ -17,7 +17,7 @@ app.use(helmet({
 }));
 
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }));
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '50kb' }));
 
 app.use(express.static(path.join(__dirname, '../secure-shop-frontend')));
 app.use(express.static(path.join(__dirname, 'secure-shop-frontend')));
@@ -56,7 +56,7 @@ const authorize = (allowedLevels) => {
     };
 };
 
-// 1. QEYDİYYAT ENDPOINT-İ (REGISTER)
+// 1. QEYDİYYAT ENDPOINT-İ
 app.post('/api/register', async (req, res) => {
     const { username, password, role_id } = req.body;
 
@@ -77,7 +77,7 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// 2. İSTİFADƏÇİ ADI / ŞİFRƏ YENİLƏMƏ ENDPOINT-İ (UPDATE)
+// 2. İSTİFADƏÇİ MƏLUMATLARININ YENİLƏNMƏSİ
 app.put('/api/users/update', async (req, res) => {
     const { current_username, new_username, new_password } = req.body;
 
@@ -109,10 +109,10 @@ app.put('/api/users/update', async (req, res) => {
     }
 });
 
-// 3. MƏHSULLARI GƏTİRMƏK (image_url daxil olmaqla)
+// 3. MƏHSULLARI GƏTİRMƏK (Əlavə Description və Galereya Şəkilləri daxil)
 app.get('/api/products', async (req, res) => {
     try {
-        const products = await pool.query('SELECT product_id, product_name, price, stock_quantity, image_url FROM public.products ORDER BY product_id ASC');
+        const products = await pool.query('SELECT product_id, product_name, price, stock_quantity, image_url, description, gallery_images FROM public.products ORDER BY product_id ASC');
         res.json(products.rows);
     } catch (err) {
         res.status(500).json({ error: "Məhsullar oxunarkən baza xətası baş verdi" });
@@ -121,7 +121,7 @@ app.get('/api/products', async (req, res) => {
 
 // 4. YENİ MƏHSUL ƏLAVƏ ETMƏK (Manager - Level 2 və Admin - Level 1)
 app.post('/api/products', authorize([1, 2]), async (req, res) => {
-    const { product_name, price, stock_quantity, image_url } = req.body;
+    const { product_name, price, stock_quantity, image_url, description, gallery_images } = req.body;
 
     if (!product_name || price === undefined || stock_quantity === undefined) {
         return res.status(400).json({ message: "Məhsul adı, qiyməti və stok miqdarı daxil edilməlidir." });
@@ -131,10 +131,12 @@ app.post('/api/products', authorize([1, 2]), async (req, res) => {
         ? image_url.trim() 
         : 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=400&q=80';
 
+    const galleryJson = Array.isArray(gallery_images) ? JSON.stringify(gallery_images) : '[]';
+
     try {
         const result = await pool.query(
-            'INSERT INTO public.products (product_name, price, stock_quantity, image_url) VALUES ($1, $2, $3, $4) RETURNING *',
-            [product_name.trim(), parseFloat(price), parseInt(stock_quantity), img]
+            'INSERT INTO public.products (product_name, price, stock_quantity, image_url, description, gallery_images) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [product_name.trim(), parseFloat(price), parseInt(stock_quantity), img, description ? description.trim() : '', galleryJson]
         );
         res.status(201).json({ message: "Məhsul uğurla əlavə olundu!", product: result.rows[0] });
     } catch (err) {
@@ -143,7 +145,7 @@ app.post('/api/products', authorize([1, 2]), async (req, res) => {
     }
 });
 
-// 5. MƏHSUL SİLMƏK (Manager - Level 2 və Admin - Level 1)
+// 5. MƏHSUL SİLMƏK (Manager/Admin)
 app.delete('/api/products/:id', authorize([1, 2]), async (req, res) => {
     const { id } = req.params;
 
