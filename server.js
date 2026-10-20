@@ -109,7 +109,7 @@ app.put('/api/users/update', async (req, res) => {
     }
 });
 
-// 3. MƏHSULLARI GƏTİRMƏK (Əlavə Description və Galereya Şəkilləri daxil)
+// 3. MƏHSULLARI GƏTİRMƏK
 app.get('/api/products', async (req, res) => {
     try {
         const products = await pool.query('SELECT product_id, product_name, price, stock_quantity, image_url, description, gallery_images FROM public.products ORDER BY product_id ASC');
@@ -145,7 +145,39 @@ app.post('/api/products', authorize([1, 2]), async (req, res) => {
     }
 });
 
-// 5. MƏHSUL SİLMƏK (Manager/Admin)
+// 5. MƏHSUL MƏLUMATLARINI YENİLƏMƏK (UPDATE - Manager və Admin)
+app.put('/api/products/:id', authorize([1, 2]), async (req, res) => {
+    const { id } = req.params;
+    const { product_name, price, stock_quantity, image_url, description, gallery_images } = req.body;
+
+    if (!product_name || price === undefined || stock_quantity === undefined) {
+        return res.status(400).json({ message: "Məhsul adı, qiyməti və stok miqdarı daxil edilməlidir." });
+    }
+
+    const img = image_url && image_url.trim() !== '' 
+        ? image_url.trim() 
+        : 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=400&q=80';
+
+    const galleryJson = Array.isArray(gallery_images) ? JSON.stringify(gallery_images) : '[]';
+
+    try {
+        const updateRes = await pool.query(
+            'UPDATE public.products SET product_name = $1, price = $2, stock_quantity = $3, image_url = $4, description = $5, gallery_images = $6, updated_at = CURRENT_TIMESTAMP WHERE product_id = $7 RETURNING *',
+            [product_name.trim(), parseFloat(price), parseInt(stock_quantity), img, description ? description.trim() : '', galleryJson, id]
+        );
+
+        if (updateRes.rowCount === 0) {
+            return res.status(404).json({ message: "Yenilənəcək məhsul tapılmadı." });
+        }
+
+        res.json({ message: "Məhsul məlumatları uğurla yeniləndi!", product: updateRes.rows[0] });
+    } catch (err) {
+        console.error("Məhsul Yeniləmə Xətası:", err);
+        res.status(500).json({ error: "Məhsul yenilənərkən xəta baş verdi." });
+    }
+});
+
+// 6. MƏHSUL SİLMƏK (Manager/Admin)
 app.delete('/api/products/:id', authorize([1, 2]), async (req, res) => {
     const { id } = req.params;
 
@@ -161,7 +193,7 @@ app.delete('/api/products/:id', authorize([1, 2]), async (req, res) => {
     }
 });
 
-// 6. GİRİŞ (LOGIN)
+// 7. GİRİŞ (LOGIN)
 app.post('/api/login', loginLimiter, async (req, res) => {
     const { username, password } = req.body;
 
@@ -198,7 +230,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     }
 });
 
-// 7. STOK YENİLƏMƏ (ADMIN)
+// 8. STOK YENİLƏMƏ (ADMIN)
 app.put('/api/products/:id/stock', authorize([1]), async (req, res) => {
     const { id } = req.params;
     const { stock_quantity } = req.body;
@@ -235,7 +267,7 @@ app.put('/api/products/:id/stock', authorize([1]), async (req, res) => {
     }
 });
 
-// 8. SATIŞ İCRASI
+// 9. SATIŞ İCRASI
 app.post('/api/sales', async (req, res) => {
     const { product_id, quantity } = req.body;
 
@@ -262,7 +294,7 @@ app.post('/api/sales', async (req, res) => {
     }
 });
 
-// 9. SİFARİŞ VƏ ÖDƏNİŞ ENDPOINT-İ
+// 10. SİFARİŞ VƏ ÖDƏNİŞ ENDPOINT-İ
 app.post('/api/orders', async (req, res) => {
     const { customer_name, phone_number, card_number, exp_date, cvv, items, total_amount } = req.body;
 

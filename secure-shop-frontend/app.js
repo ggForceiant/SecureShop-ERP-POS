@@ -16,7 +16,7 @@ const DEFAULT_IMAGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/200
 
 const ROLES = {
     1: { name: 'Admin (Level 1)', color: 'badge-admin', desc: 'Sistem Administrasiyası: Stok dəyişmə, məhsul idarəsi və AES-256 Log' },
-    2: { name: 'Manager (Level 2)', color: 'badge-manager', desc: 'Menecer: Yeni məhsul əlavə etmə və məhsul silmə yetkisi' },
+    2: { name: 'Manager (Level 2)', color: 'badge-manager', desc: 'Menecer: Yeni məhsul əlavə etmə, dəyişdirmə və silmə yetkisi' },
     3: { name: 'Operator (Level 3)', color: 'badge-operator', desc: 'Operator / Kassir: Satış icra etmə yetkisi' },
     4: { name: 'Viewer (Level 4)', color: 'badge-viewer', desc: 'Müşahidəçi: Yalnız baxış hüququ' }
 };
@@ -90,6 +90,12 @@ window.toggleProductModal = function() {
     modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
 };
 
+window.toggleEditProductModal = function() {
+    const modal = document.getElementById('edit-product-modal');
+    if (!modal) return;
+    modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+};
+
 window.addToCartById = function(productId) {
     const product = publicProducts.find(p => p.product_id === productId);
     if (!product) return;
@@ -104,7 +110,6 @@ window.removeFromCart = function(index) {
     renderCartItems();
 };
 
-// MƏHSUL DETAL SƏHİFƏSİNİ AÇMAQ
 window.openProductDetail = function(productId) {
     const product = publicProducts.find(p => p.product_id === productId);
     if (!product) return;
@@ -114,7 +119,6 @@ window.openProductDetail = function(productId) {
     document.getElementById('dashboard-section').style.display = 'none';
     document.getElementById('product-detail-section').style.display = 'block';
 
-    // Detalları doldururuq
     document.getElementById('detail-title').textContent = product.product_name;
     document.getElementById('detail-price').textContent = `${parseFloat(product.price).toFixed(2)} AZN`;
     document.getElementById('detail-stock-badge').textContent = `Stok: ${product.stock_quantity} ədəd`;
@@ -124,7 +128,6 @@ window.openProductDetail = function(productId) {
     const mainImgUrl = product.image_url || DEFAULT_IMAGE;
     mainImg.src = mainImgUrl;
 
-    // Galereya şəkilləri (Əsas şəkil + əlavə şəkillər)
     const thumbsGrid = document.getElementById('detail-thumbs-grid');
     thumbsGrid.innerHTML = '';
 
@@ -148,17 +151,13 @@ window.openProductDetail = function(productId) {
         thumbsGrid.appendChild(thumb);
     });
 
-    // Səbətə əlavə et düyməsi
     const addCartBtn = document.getElementById('detail-add-cart-btn');
     addCartBtn.onclick = () => window.addToCartById(product.product_id);
 
-    // Oxşar məhsulları render etmək (Adlarına uyğun olaraq)
     renderSimilarProducts(product);
-
     window.scrollTo(0, 0);
 };
 
-// Oxşar Məhsullar
 function renderSimilarProducts(currentProduct) {
     const grid = document.getElementById('similar-products-grid');
     if (!grid) return;
@@ -278,6 +277,70 @@ window.submitAddProduct = async function(e) {
             showToast("Məhsul uğurla əlavə olundu!");
             document.getElementById('add-product-form').reset();
             window.toggleProductModal();
+            fetchERPProducts(JSON.parse(localStorage.getItem('user')).access_level);
+            loadPublicProducts();
+        } else {
+            showToast(data.message || "Xəta baş verdi.", 'error');
+        }
+    } catch (err) {
+        showToast("Serverlə əlaqə qurulmadı.", 'error');
+    }
+};
+
+// MƏHSUL REDAKTƏ MODALINI DOLDURUB AÇMAQ
+window.openEditProductModal = function(productId) {
+    const product = publicProducts.find(p => p.product_id === productId);
+    if (!product) return;
+
+    document.getElementById('edit-prod-id').value = product.product_id;
+    document.getElementById('edit-prod-name').value = product.product_name;
+    document.getElementById('edit-prod-price').value = product.price;
+    document.getElementById('edit-prod-stock').value = product.stock_quantity;
+    document.getElementById('edit-prod-image').value = product.image_url || '';
+    document.getElementById('edit-prod-desc').value = product.description || '';
+
+    let galleryStr = '';
+    if (product.gallery_images) {
+        try {
+            const parsed = typeof product.gallery_images === 'string' ? JSON.parse(product.gallery_images) : product.gallery_images;
+            if (Array.isArray(parsed)) galleryStr = parsed.join(', ');
+        } catch (e) {}
+    }
+    document.getElementById('edit-prod-gallery').value = galleryStr;
+
+    window.toggleEditProductModal();
+};
+
+// REDAKTƏ OLUNMUŞ MƏHSULUN YADDA SAXLANMASI (SUBMIT)
+window.submitEditProduct = async function(e) {
+    e.preventDefault();
+    const productId = document.getElementById('edit-prod-id').value;
+    const product_name = document.getElementById('edit-prod-name').value.trim();
+    const price = document.getElementById('edit-prod-price').value.trim();
+    const stock_quantity = document.getElementById('edit-prod-stock').value.trim();
+    const image_url = document.getElementById('edit-prod-image').value.trim();
+    const description = document.getElementById('edit-prod-desc').value.trim();
+    const galleryInput = document.getElementById('edit-prod-gallery').value.trim();
+
+    let gallery_images = [];
+    if (galleryInput) {
+        gallery_images = galleryInput.split(',').map(url => url.trim()).filter(url => url !== '');
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/products/${productId}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+            },
+            body: JSON.stringify({ product_name, price, stock_quantity, image_url, description, gallery_images })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            showToast("Məhsul məlumatları yeniləndi!");
+            window.toggleEditProductModal();
             fetchERPProducts(JSON.parse(localStorage.getItem('user')).access_level);
             loadPublicProducts();
         } else {
@@ -483,14 +546,10 @@ function renderERPTable(products, accessLevel) {
         const tr = document.createElement('tr');
 
         let actionBtn = '';
-        if (accessLevel === 1) {
+        if (accessLevel === 1 || accessLevel === 2) {
             actionBtn = `
-                <button onclick="window.updateStockInDB(${p.product_id})" class="btn-action btn-edit"><i class="fa-solid fa-pen-to-square"></i> Stoku Dəyiş</button>
+                <button onclick="window.openEditProductModal(${p.product_id})" class="btn-action btn-edit"><i class="fa-solid fa-pen-to-square"></i> Düzenlə</button>
                 <button onclick="window.deleteProductFromDB(${p.product_id})" class="btn-action" style="background-color: rgba(244, 63, 94, 0.15); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3);"><i class="fa-solid fa-trash"></i> Sil</button>
-            `;
-        } else if (accessLevel === 2) {
-            actionBtn = `
-                <button onclick="window.deleteProductFromDB(${p.product_id})" class="btn-action" style="background-color: rgba(244, 63, 94, 0.15); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3);"><i class="fa-solid fa-trash"></i> Məhsulu Sil</button>
             `;
         } else if (accessLevel === 3) {
             actionBtn = `<button onclick="window.makeSaleInDB(${p.product_id})" class="btn-action btn-sale"><i class="fa-solid fa-cart-shopping"></i> Satış Et</button>`;
